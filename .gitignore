@@ -361,3 +361,11 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Secrets & App Settings
+appsettings.json
+appsettings.*.json
+!appsettings.Example.json
+
+# Downloaded TikTok videos
+Downloads/
