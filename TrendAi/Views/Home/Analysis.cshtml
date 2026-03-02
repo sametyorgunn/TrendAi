@@ -1,0 +1,247 @@
+@model TrendAi.ViewModels.AnalysisViewModel
+@{
+    ViewData["Title"] = "Trend Analizi";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 fw-bold">
+            <i class="fas fa-chart-pie text-primary me-2"></i>Trend Analizi
+        </h1>
+        <p class="text-muted">Trend videoları kategorilere göre analiz edin ve en popüler içerik türlerini keşfedin</p>
+    </div>
+</div>
+
+<form method="post" asp-action="Analysis" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-auto">
+            <label class="form-label fw-bold">Bölge</label>
+            <select name="regionCode" class="form-select">
+                <option value="TR" selected="@(Model.RegionCode == "TR")">🇹🇷 Türkiye</option>
+                <option value="US" selected="@(Model.RegionCode == "US")">🇺🇸 ABD</option>
+                <option value="GB" selected="@(Model.RegionCode == "GB")">🇬🇧 İngiltere</option>
+                <option value="DE" selected="@(Model.RegionCode == "DE")">🇩🇪 Almanya</option>
+                <option value="JP" selected="@(Model.RegionCode == "JP")">🇯🇵 Japonya</option>
+                <option value="KR" selected="@(Model.RegionCode == "KR")">🇰🇷 Güney Kore</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search me-1"></i>Analiz Et
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+@if (Model.Analysis is not null)
+{
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center bg-primary text-white">
+                <div class="card-body">
+                    <i class="fas fa-video fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@Model.Analysis.TotalVideosAnalyzed</h3>
+                    <p class="mb-0">Analiz Edilen Video</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <i class="fas fa-th-large fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@Model.Analysis.Categories.Count</h3>
+                    <p class="mb-0">Kategori</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <i class="fas fa-crown fa-2x mb-2"></i>
+                    <h3 class="fw-bold line-clamp-1">@(Model.Analysis.TopCategory?.Name ?? "-")</h3>
+                    <p class="mb-0">En Trend Kategori</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning text-dark">
+                <div class="card-body">
+                    <i class="fas fa-tags fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@Model.Analysis.TopTags.Count</h3>
+                    <p class="mb-0">Popüler Etiket</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-chart-bar me-2"></i>Kategori Dağılımı
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-chart-pie me-2"></i>Trend Skorları
+                </div>
+                <div class="card-body">
+                    <canvas id="trendScoreChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-list-ol me-2"></i>Kategori Detayları
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Kategori</th>
+                                    <th>Video</th>
+                                    <th>Toplam İzlenme</th>
+                                    <th>Ort. İzlenme</th>
+                                    <th>Trend Skoru</th>
+                                    <th>Popüler Etiketler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ var rank = 1; }
+                                @foreach (var category in Model.Analysis.Categories)
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (rank <= 3)
+                                            {
+                                                var badgeClass = rank == 1 ? "danger" : rank == 2 ? "warning" : "info";
+                                                <span class="badge bg-@badgeClass">@rank</span>
+                                            }
+                                            else
+                                            {
+                                                @rank
+                                            }
+                                        </td>
+                                        <td class="fw-bold">@category.Name</td>
+                                        <td>@category.VideoCount</td>
+                                        <td>@category.FormattedTotalViews</td>
+                                        <td>@category.AverageViews.ToString("N0")</td>
+                                        <td>
+                                            <div class="progress" style="width:100px;height:20px;">
+                                                <div class="progress-bar bg-danger" style="width:@(Math.Min(category.TrendScore * 2, 100))%">
+                                                    @category.TrendScore.ToString("F1")
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @foreach (var tag in category.TopTags.Take(3))
+                                            {
+                                                <span class="badge bg-secondary me-1">#@tag</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                    rank++;
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-hashtag me-2"></i>En Popüler Etiketler
+                </div>
+                <div class="card-body">
+                    @foreach (var tag in Model.Analysis.TopTags.Take(15))
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-danger">#@tag.Tag</span>
+                            <small class="text-muted">@tag.Count video</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a asp-controller="Home" asp-action="Generate" asp-route-region="@Model.RegionCode" class="btn btn-lg btn-danger">
+            <i class="fas fa-robot me-2"></i>Bu Trendlere Göre AI ile Video Fikirleri Üret
+        </a>
+    </div>
+}
+else if (!Model.IsLoaded)
+{
+    <div class="text-center py-5">
+        <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
+        <h4 class="text-muted">Analiz başlatmak için bölge seçin ve "Analiz Et" butonuna tıklayın</h4>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Analysis is not null)
+    {
+        <script>
+            var categoryNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Analysis.Categories.Select(c => c.Name)));
+            var videoCounts = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Analysis.Categories.Select(c => c.VideoCount)));
+            var trendScores = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Analysis.Categories.Select(c => Math.Round(c.TrendScore, 1))));
+
+            var colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF', '#7BC225', '#E74C3C', '#3498DB'];
+
+            new Chart(document.getElementById('categoryChart'), {
+                type: 'bar',
+                data: {
+                    labels: categoryNames,
+                    datasets: [{
+                        label: 'Video Sayısı',
+                        data: videoCounts,
+                        backgroundColor: colors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            new Chart(document.getElementById('trendScoreChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: categoryNames,
+                    datasets: [{
+                        data: trendScores,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12 } }
+                    }
+                }
+            });
+        </script>
+    }
+}

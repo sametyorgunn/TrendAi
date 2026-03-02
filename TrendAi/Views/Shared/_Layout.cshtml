@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - TrendVideo AI</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
+                <i class="fas fa-chart-line text-danger me-2"></i>TrendVideo AI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fab fa-youtube text-danger me-1"></i>YouTube
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="Index"><i class="fas fa-fire me-1"></i>Trendler</a></li>
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="Analysis"><i class="fas fa-chart-pie me-1"></i>Analiz</a></li>
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="Generate"><i class="fas fa-robot me-1"></i>AI Video Üret</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fab fa-tiktok me-1"></i>TikTok
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" asp-controller="TikTok" asp-action="Index"><i class="fas fa-fire me-1"></i>Trendler</a></li>
+                            <li><a class="dropdown-item" asp-controller="TikTok" asp-action="Analysis"><i class="fas fa-chart-pie me-1"></i>Analiz</a></li>
+                            <li><a class="dropdown-item" asp-controller="TikTok" asp-action="Generate"><i class="fas fa-robot me-1"></i>AI Video Üret</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" asp-controller="TikTok" asp-action="Download"><i class="fas fa-download me-1"></i>İndir & Paylaş</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        @RenderBody()
+    </main>
+
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; @DateTime.Now.Year TrendVideo AI - Trend Analizi &amp; AI Video Üretici</p>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

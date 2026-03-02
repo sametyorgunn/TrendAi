@@ -1,0 +1,125 @@
+@model TrendAi.ViewModels.TikTokTrendViewModel
+@{
+    ViewData["Title"] = "TikTok Trendleri";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="display-6 fw-bold">
+                    <i class="fab fa-tiktok me-2"></i>TikTok Trendleri
+                </h1>
+                <p class="text-muted">TikTok'ta şu anda viral olan ve FYP'de trend olan videolar</p>
+            </div>
+            <form method="post" asp-action="Index" asp-controller="TikTok">
+                <div class="input-group">
+                    <select name="regionCode" class="form-select">
+                        <option value="TR" selected="@(Model.RegionCode == "TR")">🇹🇷 Türkiye</option>
+                        <option value="US" selected="@(Model.RegionCode == "US")">🇺🇸 ABD</option>
+                        <option value="GB" selected="@(Model.RegionCode == "GB")">🇬🇧 İngiltere</option>
+                        <option value="DE" selected="@(Model.RegionCode == "DE")">🇩🇪 Almanya</option>
+                        <option value="FR" selected="@(Model.RegionCode == "FR")">🇫🇷 Fransa</option>
+                        <option value="JP" selected="@(Model.RegionCode == "JP")">🇯🇵 Japonya</option>
+                        <option value="KR" selected="@(Model.RegionCode == "KR")">🇰🇷 Güney Kore</option>
+                        <option value="BR" selected="@(Model.RegionCode == "BR")">🇧🇷 Brezilya</option>
+                    </select>
+                    <button type="submit" class="btn btn-dark">
+                        <i class="fas fa-sync-alt me-1"></i>Trendleri Getir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+@if (Model.Videos.Count > 0)
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+        @foreach (var video in Model.Videos)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm video-card">
+                    <div class="position-relative">
+                        @if (!string.IsNullOrEmpty(video.CoverUrl))
+                        {
+                            <img src="@video.CoverUrl" class="card-img-top" alt="@video.Description"
+                                 style="height: 280px; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <div class="card-img-top bg-dark d-flex align-items-center justify-content-center" style="height: 280px;">
+                                <i class="fab fa-tiktok fa-3x text-white"></i>
+                            </div>
+                        }
+                        <span class="badge bg-dark position-absolute bottom-0 end-0 m-2">
+                            <i class="fas fa-clock me-1"></i>@video.FormattedDuration
+                        </span>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center mb-2">
+                            @if (!string.IsNullOrEmpty(video.AuthorAvatar))
+                            {
+                                <img src="@video.AuthorAvatar" class="rounded-circle me-2" style="width:28px;height:28px;object-fit:cover;" />
+                            }
+                            <small class="fw-bold text-truncate">@@@video.AuthorName</small>
+                        </div>
+                        <p class="card-text small line-clamp-2 mb-2">@video.Description</p>
+
+                        @if (video.Hashtags.Count > 0)
+                        {
+                            <div class="mb-2">
+                                @foreach (var tag in video.Hashtags.Take(3))
+                                {
+                                    <span class="badge bg-dark me-1 mb-1">#@tag</span>
+                                }
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(video.MusicTitle))
+                        {
+                            <small class="text-muted"><i class="fas fa-music me-1"></i>@video.MusicTitle</small>
+                        }
+
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between text-muted small mt-2">
+                                <span><i class="fas fa-play me-1"></i>@video.FormattedPlays</span>
+                                <span><i class="fas fa-heart me-1"></i>@video.FormattedLikes</span>
+                                <span><i class="fas fa-comment me-1"></i>@video.CommentCount.ToString("N0")</span>
+                                <span><i class="fas fa-share me-1"></i>@video.ShareCount.ToString("N0")</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="@video.TikTokUrl" target="_blank" class="btn btn-outline-dark btn-sm w-100">
+                            <i class="fab fa-tiktok me-1"></i>TikTok'ta Aç
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else if (Model.IsLoaded)
+{
+    <div class="text-center py-5">
+        <i class="fab fa-tiktok fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">TikTok trend videosu bulunamadı</h4>
+        <p class="text-muted">RapidAPI anahtarınızı kontrol edin veya farklı bir bölge seçin.</p>
+    </div>
+}
+else
+{
+    <div class="text-center py-5">
+        <i class="fab fa-tiktok fa-3x mb-3"></i>
+        <h4 class="text-muted">Başlamak için "Trendleri Getir" butonuna tıklayın</h4>
+        <p class="text-muted">TikTok'taki en güncel viral videoları analiz edeceğiz.</p>
+    </div>
+}

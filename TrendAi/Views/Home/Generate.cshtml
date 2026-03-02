@@ -1,0 +1,144 @@
+@model TrendAi.ViewModels.GenerateViewModel
+@{
+    ViewData["Title"] = "AI Video Üretici";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 fw-bold">
+            <i class="fas fa-robot text-success me-2"></i>AI Video Üretici
+        </h1>
+        <p class="text-muted">Trend analizine göre AI ile viral video fikirleri ve senaryolar üretin</p>
+    </div>
+</div>
+
+<form method="post" asp-action="Generate" class="mb-4" id="generateForm">
+    <div class="row g-3 align-items-end">
+        <div class="col-auto">
+            <label class="form-label fw-bold">Bölge</label>
+            <select name="regionCode" class="form-select">
+                <option value="TR" selected="@(Model.RegionCode == "TR")">🇹🇷 Türkiye</option>
+                <option value="US" selected="@(Model.RegionCode == "US")">🇺🇸 ABD</option>
+                <option value="GB" selected="@(Model.RegionCode == "GB")">🇬🇧 İngiltere</option>
+                <option value="DE" selected="@(Model.RegionCode == "DE")">🇩🇪 Almanya</option>
+                <option value="JP" selected="@(Model.RegionCode == "JP")">🇯🇵 Japonya</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label fw-bold">Fikir Sayısı</label>
+            <select name="ideaCount" class="form-select">
+                <option value="3" selected="@(Model.IdeaCount == 3)">3</option>
+                <option value="5" selected="@(Model.IdeaCount == 5)">5</option>
+                <option value="10" selected="@(Model.IdeaCount == 10)">10</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-success btn-lg" id="generateBtn">
+                <i class="fas fa-magic me-1"></i>Video Fikirleri Üret
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+@if (Model.Suggestions.Count > 0)
+{
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>@Model.Suggestions.Count video fikri</strong> trend analizine dayanarak oluşturuldu.
+        @if (Model.Analysis is not null)
+        {
+            <span>Analiz edilen video sayısı: <strong>@Model.Analysis.TotalVideosAnalyzed</strong></span>
+        }
+    </div>
+
+    <div class="row g-4">
+        @{ var index = 0; }
+        @foreach (var suggestion in Model.Suggestions)
+        {
+            index++;
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-5 border-success">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">
+                            <span class="badge bg-success me-2">@index</span>
+                            @suggestion.Title
+                        </h5>
+                        <span class="badge bg-danger fs-6">@suggestion.Category</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-8">
+                                <h6 class="fw-bold text-primary">
+                                    <i class="fas fa-align-left me-1"></i>Açıklama
+                                </h6>
+                                <p>@suggestion.Description</p>
+
+                                <h6 class="fw-bold text-primary mt-3">
+                                    <i class="fas fa-scroll me-1"></i>Senaryo / Akış Planı
+                                </h6>
+                                <div class="bg-light p-3 rounded">
+                                    @foreach (var line in suggestion.Script.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <p class="mb-1">@line.Trim()</p>
+                                    }
+                                </div>
+
+                                <h6 class="fw-bold text-primary mt-3">
+                                    <i class="fas fa-lightbulb me-1"></i>Neden Tutacak?
+                                </h6>
+                                <p class="text-success fw-semibold">@suggestion.WhyItWorks</p>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold"><i class="fas fa-image me-1"></i>Thumbnail Fikri</h6>
+                                        <p class="small">@suggestion.ThumbnailIdea</p>
+
+                                        <h6 class="fw-bold mt-3"><i class="fas fa-users me-1"></i>Hedef Kitle</h6>
+                                        <p class="small">@suggestion.TargetAudience</p>
+
+                                        <h6 class="fw-bold mt-3"><i class="fas fa-clock me-1"></i>Tahmini Süre</h6>
+                                        <p class="small">@suggestion.EstimatedDuration</p>
+
+                                        <h6 class="fw-bold mt-3"><i class="fas fa-tags me-1"></i>Etiketler</h6>
+                                        <div>
+                                            @foreach (var tag in suggestion.Tags)
+                                            {
+                                                <span class="badge bg-danger me-1 mb-1">#@tag</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else if (!Model.IsLoaded)
+{
+    <div class="text-center py-5">
+        <i class="fas fa-robot fa-3x text-success mb-3"></i>
+        <h4 class="text-muted">Bölge seçin ve "Video Fikirleri Üret" butonuna tıklayın</h4>
+        <p class="text-muted">AI, YouTube trendlerini analiz ederek size özel video fikirleri oluşturacak.</p>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.getElementById('generateForm')?.addEventListener('submit', function () {
+            var btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Üretiliyor...';
+        });
+    </script>
+}

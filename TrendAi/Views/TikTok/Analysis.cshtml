@@ -1,0 +1,245 @@
+@model TrendAi.ViewModels.TikTokAnalysisViewModel
+@{
+    ViewData["Title"] = "TikTok Trend Analizi";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 fw-bold">
+            <i class="fab fa-tiktok me-2"></i>TikTok Trend Analizi
+        </h1>
+        <p class="text-muted">TikTok trendlerini hashtag ve müzik bazında analiz edin</p>
+    </div>
+</div>
+
+<form method="post" asp-action="Analysis" asp-controller="TikTok" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-auto">
+            <label class="form-label fw-bold">Bölge</label>
+            <select name="regionCode" class="form-select">
+                <option value="TR" selected="@(Model.RegionCode == "TR")">🇹🇷 Türkiye</option>
+                <option value="US" selected="@(Model.RegionCode == "US")">🇺🇸 ABD</option>
+                <option value="GB" selected="@(Model.RegionCode == "GB")">🇬🇧 İngiltere</option>
+                <option value="DE" selected="@(Model.RegionCode == "DE")">🇩🇪 Almanya</option>
+                <option value="JP" selected="@(Model.RegionCode == "JP")">🇯🇵 Japonya</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-dark">
+                <i class="fas fa-search me-1"></i>Analiz Et
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+@if (Model.Analysis is not null)
+{
+    var a = Model.Analysis;
+
+    <!-- Özet Kartlar -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center bg-dark text-white">
+                <div class="card-body">
+                    <i class="fab fa-tiktok fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@a.TotalVideosAnalyzed</h3>
+                    <p class="mb-0">Analiz Edilen Video</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <i class="fas fa-play fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@(a.TotalPlays switch { >= 1_000_000_000 => $"{a.TotalPlays / 1_000_000_000.0:F1}B", >= 1_000_000 => $"{a.TotalPlays / 1_000_000.0:F1}M", >= 1_000 => $"{a.TotalPlays / 1_000.0:F1}K", _ => a.TotalPlays.ToString() })</h3>
+                    <p class="mb-0">Toplam İzlenme</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <i class="fas fa-hashtag fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@a.TopHashtags.Count</h3>
+                    <p class="mb-0">Trend Hashtag</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h3 class="fw-bold">%@a.AvgEngagementRate.ToString("F2")</h3>
+                    <p class="mb-0">Ort. Etkileşim</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafikler -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-chart-bar me-2"></i>Hashtag Dağılımı (Video Sayısı)
+                </div>
+                <div class="card-body">
+                    <canvas id="hashtagChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-music me-2"></i>Trend Müzikler
+                </div>
+                <div class="card-body">
+                    @if (a.TopMusic.Count > 0)
+                    {
+                        @foreach (var music in a.TopMusic.Take(10))
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div class="text-truncate me-2">
+                                    <i class="fas fa-music text-danger me-1"></i>
+                                    <small class="fw-bold">@music.Title</small>
+                                </div>
+                                <span class="badge bg-dark">@music.VideoCount</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Müzik verisi bulunamadı</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hashtag Tablosu -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-hashtag me-2"></i>Trend Hashtag Detayları
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Hashtag</th>
+                                    <th>Video</th>
+                                    <th>Toplam İzlenme</th>
+                                    <th>Toplam Beğeni</th>
+                                    <th>Etkileşim %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ var rank = 1; }
+                                @foreach (var tag in a.TopHashtags.Take(15))
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (rank <= 3)
+                                            {
+                                                var cls = rank == 1 ? "danger" : rank == 2 ? "warning" : "info";
+                                                <span class="badge bg-@cls">@rank</span>
+                                            }
+                                            else
+                                            {
+                                                @rank
+                                            }
+                                        </td>
+                                        <td class="fw-bold">#@tag.Tag</td>
+                                        <td>@tag.VideoCount</td>
+                                        <td>@tag.FormattedPlays</td>
+                                        <td>@(tag.TotalLikes switch { >= 1_000_000 => $"{tag.TotalLikes / 1_000_000.0:F1}M", >= 1_000 => $"{tag.TotalLikes / 1_000.0:F1}K", _ => tag.TotalLikes.ToString() })</td>
+                                        <td>
+                                            <div class="progress" style="width:80px;height:18px;">
+                                                <div class="progress-bar bg-danger" style="width:@(Math.Min(tag.EngagementRate * 5, 100))%">
+                                                    @tag.EngagementRate.ToString("F1")%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    rank++;
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-fire me-2"></i>Top 10 Video
+                </div>
+                <div class="card-body">
+                    @foreach (var video in a.AllVideos.OrderByDescending(v => v.PlayCount).Take(10))
+                    {
+                        <div class="mb-3 pb-2 border-bottom">
+                            <div class="d-flex justify-content-between">
+                                <small class="fw-bold text-truncate me-2">@@@video.AuthorName</small>
+                                <small class="text-danger fw-bold">@video.FormattedPlays</small>
+                            </div>
+                            <small class="text-muted line-clamp-1">@video.Description</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a asp-controller="TikTok" asp-action="Generate" asp-route-region="@Model.RegionCode" class="btn btn-lg btn-dark">
+            <i class="fas fa-robot me-2"></i>Bu Trendlere Göre AI ile TikTok Fikirleri Üret
+        </a>
+    </div>
+}
+else if (!Model.IsLoaded)
+{
+    <div class="text-center py-5">
+        <i class="fab fa-tiktok fa-3x mb-3"></i>
+        <h4 class="text-muted">Bölge seçin ve "Analiz Et" butonuna tıklayın</h4>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Analysis is not null)
+    {
+        <script>
+            var hashtagNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Analysis.TopHashtags.Take(10).Select(h => "#" + h.Tag)));
+            var hashtagCounts = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Analysis.TopHashtags.Take(10).Select(h => h.VideoCount)));
+
+            var colors = ['#000000', '#FE2C55', '#25F4EE', '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'];
+
+            new Chart(document.getElementById('hashtagChart'), {
+                type: 'bar',
+                data: {
+                    labels: hashtagNames,
+                    datasets: [{
+                        label: 'Video Sayısı',
+                        data: hashtagCounts,
+                        backgroundColor: colors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        </script>
+    }
+}

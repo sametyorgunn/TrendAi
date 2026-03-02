@@ -1,0 +1,182 @@
+@model TrendAi.ViewModels.TikTokDownloadViewModel
+@{
+    ViewData["Title"] = "TikTok İndir & Paylaş";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 fw-bold">
+            <i class="fas fa-download me-2"></i>TikTok İndir & Paylaş
+        </h1>
+        <p class="text-muted">Trend videoları indirin ve kendi TikTok hesabınızda paylaşın</p>
+    </div>
+</div>
+
+@if (TempData["PublishResult"] is string publishMsg)
+{
+    <div class="alert @(publishMsg.StartsWith("✅") ? "alert-success" : "alert-danger") alert-dismissible fade show">
+        @publishMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- TikTok Hesap Bağlantısı -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white fw-bold">
+        <i class="fas fa-link me-2"></i>TikTok Hesap Bağlantısı
+    </div>
+    <div class="card-body">
+        @if (Model.IsAuthenticated)
+        {
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success fs-6 me-3"><i class="fas fa-check-circle me-1"></i>Bağlı</span>
+                <span class="text-muted">TikTok hesabınız bağlı. İndirilen videoları doğrudan paylaşabilirsiniz.</span>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex align-items-center flex-wrap gap-3">
+                <span class="badge bg-warning text-dark fs-6"><i class="fas fa-exclamation-circle me-1"></i>Bağlı Değil</span>
+                <span class="text-muted">Video paylaşmak için TikTok hesabınızı bağlayın.</span>
+                @if (!string.IsNullOrEmpty(Model.AuthUrl) && Model.AuthUrl.Contains("client_key=") && !Model.AuthUrl.Contains("client_key=&"))
+                {
+                    <a href="@Model.AuthUrl" class="btn btn-dark">
+                        <i class="fab fa-tiktok me-1"></i>TikTok ile Bağlan
+                    </a>
+                }
+                else
+                {
+                    <span class="text-danger small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Önce <code>appsettings.json</code> → <code>TikTokPublish</code> bölümüne
+                        <a href="https://developers.tiktok.com/" target="_blank">TikTok Developer Portal</a>'dan
+                        alacağınız ClientKey ve ClientSecret'ı girin.
+                    </span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- İndirme Formu -->
+<form method="post" asp-action="Download" asp-controller="TikTok" class="mb-4" id="downloadForm">
+    <div class="row g-3 align-items-end">
+        <div class="col-auto">
+            <label class="form-label fw-bold">Bölge</label>
+            <select name="regionCode" class="form-select">
+                <option value="TR" selected="@(Model.RegionCode == "TR")">🇹🇷 Türkiye</option>
+                <option value="US" selected="@(Model.RegionCode == "US")">🇺🇸 ABD</option>
+                <option value="GB" selected="@(Model.RegionCode == "GB")">🇬🇧 İngiltere</option>
+                <option value="DE" selected="@(Model.RegionCode == "DE")">🇩🇪 Almanya</option>
+                <option value="JP" selected="@(Model.RegionCode == "JP")">🇯🇵 Japonya</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label fw-bold">Kaç Video?</label>
+            <select name="downloadCount" class="form-select">
+                <option value="3" selected="@(Model.DownloadCount == 3)">3</option>
+                <option value="5" selected="@(Model.DownloadCount == 5)">5</option>
+                <option value="10" selected="@(Model.DownloadCount == 10)">10</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-dark btn-lg" id="downloadBtn">
+                <i class="fas fa-download me-1"></i>Trend Videoları İndir
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle me-2"></i>@Model.SuccessMessage
+    </div>
+}
+
+@if (Model.DownloadResults.Count > 0)
+{
+    <div class="row g-4">
+        @foreach (var result in Model.DownloadResults)
+        {
+            <div class="col-12">
+                <div class="card shadow-sm @(result.Success ? "border-start border-5 border-success" : "border-start border-5 border-danger")">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                @if (!string.IsNullOrEmpty(result.Video.CoverUrl))
+                                {
+                                    <img src="@result.Video.CoverUrl" class="rounded" style="width:80px;height:110px;object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <div class="bg-dark rounded d-flex align-items-center justify-content-center" style="width:80px;height:110px;">
+                                        <i class="fab fa-tiktok fa-2x text-white"></i>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col">
+                                <h6 class="fw-bold mb-1">@@@result.Video.AuthorName</h6>
+                                <p class="small text-muted mb-1 line-clamp-2">@result.Video.Description</p>
+                                <div class="d-flex gap-3 small text-muted">
+                                    <span><i class="fas fa-play me-1"></i>@result.Video.FormattedPlays</span>
+                                    <span><i class="fas fa-heart me-1"></i>@result.Video.FormattedLikes</span>
+                                    <span><i class="fas fa-clock me-1"></i>@result.Video.FormattedDuration</span>
+                                </div>
+                            </div>
+                            <div class="col-auto text-end">
+                                @if (result.Success)
+                                {
+                                    <span class="badge bg-success mb-2 d-block"><i class="fas fa-check me-1"></i>İndirildi</span>
+                                    <small class="text-muted d-block mb-2" style="max-width:250px;word-break:break-all;">@System.IO.Path.GetFileName(result.FilePath)</small>
+
+                                    @if (Model.IsAuthenticated)
+                                    {
+                                        <form method="post" asp-action="PublishVideo" asp-controller="TikTok" class="d-inline">
+                                            <input type="hidden" name="videoPath" value="@result.FilePath" />
+                                            <input type="hidden" name="description" value="@result.Video.Description" />
+                                            <input type="hidden" name="hashtags" value="@string.Join(",", result.Video.Hashtags)" />
+                                            <button type="submit" class="btn btn-sm btn-dark">
+                                                <i class="fab fa-tiktok me-1"></i>TikTok'a Paylaş
+                                            </button>
+                                        </form>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Başarısız</span>
+                                    <small class="text-danger d-block">@result.ErrorMessage</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else if (!Model.IsLoaded)
+{
+    <div class="text-center py-5">
+        <i class="fas fa-download fa-3x mb-3"></i>
+        <h4 class="text-muted">Bölge seçin ve "Trend Videoları İndir" butonuna tıklayın</h4>
+        <p class="text-muted">En popüler TikTok videolarını filigransız indirin ve hesabınızda paylaşın.</p>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.getElementById('downloadForm')?.addEventListener('submit', function () {
+            var btn = document.getElementById('downloadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>İndiriliyor...';
+        });
+    </script>
+}
