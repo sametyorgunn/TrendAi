@@ -1,0 +1,166 @@
+@model TrendAi.ViewModels.InstagramGenerateViewModel
+@{
+    ViewData["Title"] = "AI Instagram Reels Üretici";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 fw-bold">
+            <i class="fas fa-robot me-2"></i><i class="fab fa-instagram me-2" style="color:#E1306C;"></i>AI Instagram Reels Üretici
+        </h1>
+        <p class="text-muted">Instagram trendlerine göre AI ile Keşfet'e düşme potansiyeli yüksek Reels fikirleri ve senaryolar üretin</p>
+    </div>
+</div>
+
+<form method="post" asp-action="Generate" asp-controller="Instagram" class="mb-4" id="generateForm">
+    <div class="row g-3 align-items-end">
+        <div class="col-auto">
+            <label class="form-label fw-bold">Hashtag / Kategori</label>
+            <select name="hashtag" class="form-select">
+                <option value="reels" selected="@(Model.Hashtag == "reels")">🎬 Reels</option>
+                <option value="kesfet" selected="@(Model.Hashtag == "kesfet")">🔍 Keşfet (TR)</option>
+                <option value="trending" selected="@(Model.Hashtag == "trending")">🔥 Trending</option>
+                <option value="viral" selected="@(Model.Hashtag == "viral")">💥 Viral</option>
+                <option value="foryou" selected="@(Model.Hashtag == "foryou")">✨ For You</option>
+                <option value="entertainment" selected="@(Model.Hashtag == "entertainment")">🎭 Eğlence</option>
+                <option value="fashion" selected="@(Model.Hashtag == "fashion")">👗 Moda</option>
+                <option value="food" selected="@(Model.Hashtag == "food")">🍕 Yemek</option>
+                <option value="travel" selected="@(Model.Hashtag == "travel")">✈️ Seyahat</option>
+                <option value="fitness" selected="@(Model.Hashtag == "fitness")">💪 Fitness</option>
+                <option value="technology" selected="@(Model.Hashtag == "technology")">💻 Teknoloji</option>
+                <option value="comedy" selected="@(Model.Hashtag == "comedy")">😂 Komedi</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label fw-bold">Fikir Sayısı</label>
+            <select name="ideaCount" class="form-select">
+                <option value="3" selected="@(Model.IdeaCount == 3)">3</option>
+                <option value="5" selected="@(Model.IdeaCount == 5)">5</option>
+                <option value="10" selected="@(Model.IdeaCount == 10)">10</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-lg" style="background:#E1306C;color:white;" id="generateBtn">
+                <i class="fas fa-magic me-1"></i>Reels Fikirleri Üret
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+@if (Model.Suggestions.Count > 0)
+{
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>@Model.Suggestions.Count Instagram Reels fikri</strong> trend analizine dayanarak oluşturuldu.
+        @if (Model.Analysis is not null)
+        {
+            <span>Analiz edilen post: <strong>@Model.Analysis.TotalPostsAnalyzed</strong> | Hashtag: <strong>#@Model.Hashtag</strong></span>
+        }
+    </div>
+
+    <div class="row g-4">
+        @{ var index = 0; }
+        @foreach (var suggestion in Model.Suggestions)
+        {
+            index++;
+            <div class="col-12">
+                <div class="card shadow-sm border-start border-5" style="border-color:#E1306C !important;">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">
+                            <span class="badge me-2" style="background:#E1306C;">@index</span>
+                            @suggestion.Title
+                        </h5>
+                        <span class="badge fs-6" style="background: linear-gradient(45deg, #f09433, #dc2743);">
+                            <i class="fab fa-instagram me-1"></i>@suggestion.Category
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-8">
+                                <h6 class="fw-bold" style="color:#E1306C;">
+                                    <i class="fas fa-align-left me-1"></i>Caption & Hook
+                                </h6>
+                                <p>@suggestion.Description</p>
+
+                                <h6 class="fw-bold mt-3" style="color:#E1306C;">
+                                    <i class="fas fa-scroll me-1"></i>Senaryo (Saniye Bazlı)
+                                </h6>
+                                <div class="bg-light p-3 rounded">
+                                    @foreach (var line in suggestion.Script.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <p class="mb-1">@line.Trim()</p>
+                                    }
+                                </div>
+
+                                <h6 class="fw-bold mt-3" style="color:#E1306C;">
+                                    <i class="fas fa-lightbulb me-1"></i>Neden Keşfet'e Düşecek?
+                                </h6>
+                                <p class="fw-semibold" style="color:#833AB4;">@suggestion.WhyItWorks</p>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 bg-light h-100">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold" style="color:#E1306C;">
+                                            <i class="fas fa-image me-1"></i>Kapak Karesi
+                                        </h6>
+                                        <p class="small">@suggestion.ThumbnailIdea</p>
+
+                                        <h6 class="fw-bold mt-3" style="color:#E1306C;">
+                                            <i class="fas fa-users me-1"></i>Hedef Kitle
+                                        </h6>
+                                        <p class="small">@suggestion.TargetAudience</p>
+
+                                        <h6 class="fw-bold mt-3" style="color:#E1306C;">
+                                            <i class="fas fa-clock me-1"></i>Süre
+                                        </h6>
+                                        <span class="badge" style="background:#E1306C;font-size:0.9rem;">
+                                            @suggestion.EstimatedDuration
+                                        </span>
+
+                                        @if (suggestion.Tags.Count > 0)
+                                        {
+                                            <h6 class="fw-bold mt-3" style="color:#E1306C;">
+                                                <i class="fas fa-hashtag me-1"></i>Önerilen Hashtag'ler
+                                            </h6>
+                                            <div>
+                                                @foreach (var tag in suggestion.Tags)
+                                                {
+                                                    <span class="badge me-1 mb-1" style="background:#833AB4;">#@tag</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else if (!Model.IsLoaded)
+{
+    <div class="text-center py-5">
+        <i class="fab fa-instagram fa-4x mb-3" style="color:#E1306C;"></i>
+        <h4>Instagram Reels AI Üretici</h4>
+        <p class="text-muted">Hashtag seçip "Reels Fikirleri Üret" butonuna tıklayın.</p>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.getElementById('generateForm').addEventListener('submit', function () {
+            var btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>AI Analiz Ediyor...';
+        });
+    </script>
+}

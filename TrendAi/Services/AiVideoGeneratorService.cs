@@ -329,6 +329,160 @@ public class AiVideoGeneratorService : IAiVideoGeneratorService
 
         return suggestions;
     }
+
+    public async Task<List<AiVideoSuggestion>> GenerateInstagramIdeasAsync(InstagramTrendAnalysisResult analysis, int count = 5)
+    {
+        try
+        {
+            var summary = BuildInstagramSummary(analysis);
+            var prompt = BuildInstagramPrompt(summary, count);
+
+            var requestBody = new
+            {
+                model = _settings.Model,
+                messages = new object[]
+                {
+                    new
+                    {
+                        role = "system",
+                        content = """
+                            Sen bir Instagram Reels içerik stratejisti ve viral video uzmanısın.
+                            Trend analizlerine dayanarak Keşfet sayfasında öne çıkma potansiyeli yüksek kısa video fikirleri üretiyorsun.
+                            Yanıtlarını her zaman geçerli JSON formatında ver.
+                            """
+                    },
+                    new { role = "user", content = prompt }
+                },
+                temperature = 0.8,
+                max_tokens = 4000
+            };
+
+            var json = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
+
+            var response = await _httpClient.PostAsync($"{_settings.BaseUrl}/chat/completions", content);
+            var responseString = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("OpenAI API hatası (Instagram): {Status} - {Response}", response.StatusCode, responseString);
+                return GenerateInstagramFallback(analysis, count);
+            }
+
+            var result = JsonSerializer.Deserialize<OpenAiChatResponse>(responseString);
+            var messageContent = result?.Choices?.FirstOrDefault()?.Message?.Content;
+
+            if (string.IsNullOrEmpty(messageContent))
+                return GenerateInstagramFallback(analysis, count);
+
+            var jsonStart = messageContent.IndexOf('[');
+            var jsonEnd = messageContent.LastIndexOf(']');
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+                messageContent = messageContent[jsonStart..(jsonEnd + 1)];
+
+            var suggestions = JsonSerializer.Deserialize<List<AiVideoSuggestion>>(messageContent,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            return suggestions ?? GenerateInstagramFallback(analysis, count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Instagram AI önerileri oluşturulurken hata oluştu");
+            return GenerateInstagramFallback(analysis, count);
+        }
+    }
+
+    private static string BuildInstagramSummary(InstagramTrendAnalysisResult analysis)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Kategori/Hashtag: #{analysis.Category}");
+        sb.AppendLine($"Analiz edilen post sayısı: {analysis.TotalPostsAnalyzed}");
+        sb.AppendLine($"Toplam izlenme: {analysis.TotalViews:N0}");
+        sb.AppendLine($"Toplam beğeni: {analysis.TotalLikes:N0}");
+        sb.AppendLine($"Ortalama etkileşim oranı: %{analysis.AvgEngagementRate:F2}");
+        sb.AppendLine();
+
+        sb.AppendLine("=== TREND HASHTAG'LER ===");
+        foreach (var tag in analysis.TopHashtags.Take(15))
+        {
+            sb.AppendLine($"  #{tag.Tag} - {tag.PostCount} post, {tag.FormattedViews} izlenme, etkileşim: %{tag.EngagementRate:F2}");
+        }
+
+        if (analysis.TopMusic.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("=== TREND MÜZİKLER ===");
+            foreach (var music in analysis.TopMusic.Take(10))
+            {
+                sb.AppendLine($"  🎵 {music.Title} - {music.PostCount} post");
+            }
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("=== EN ÇOK İZLENEN REELS ===");
+        foreach (var post in analysis.AllPosts.OrderByDescending(p => p.ViewCount > 0 ? p.ViewCount : p.LikeCount).Take(5))
+        {
+            var preview = post.Caption.Length > 80 ? post.Caption[..80] + "..." : post.Caption;
+            sb.AppendLine($"  \"{preview}\" - {post.FormattedViews} izlenme, @{post.AuthorUsername}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildInstagramPrompt(string summary, int count)
+    {
+        return $$"""
+            Aşağıdaki Instagram Reels trend verilerine dayanarak {{count}} adet Keşfet sayfasında öne çıkma potansiyeli yüksek Instagram Reels fikri üret.
+
+            {{summary}}
+
+            Her Reels fikri için şu bilgileri JSON dizisi formatında ver:
+            [
+              {
+                "title": "Reel konsepti (kısa, dikkat çekici)",
+                "description": "Caption ve hook cümlesi (Instagram formatında, hashtag önerileri dahil)",
+                "category": "İçerik kategorisi",
+                "script": "Reels'ın saniye saniye akış planı (15-90 saniyelik format, hook+içerik+CTA yapısı)",
+                "tags": ["hashtag1", "hashtag2", "hashtag3", "hashtag4", "hashtag5"],
+                "thumbnailIdea": "Kapak karesi / ilk frame önerisi (dikkat çekici, metin overlay önerisi)",
+                "targetAudience": "Hedef kitle",
+                "estimatedDuration": "Tahmini süre (15s/30s/60s/90s)",
+                "whyItWorks": "Neden Keşfet'e düşeceğinin açıklaması"
+              }
+            ]
+
+            SADECE JSON dizisi döndür, başka hiçbir metin ekleme.
+            """;
+    }
+
+    private static List<AiVideoSuggestion> GenerateInstagramFallback(InstagramTrendAnalysisResult analysis, int count)
+    {
+        var suggestions = new List<AiVideoSuggestion>();
+
+        foreach (var hashtag in analysis.TopHashtags.Take(count))
+        {
+            suggestions.Add(new AiVideoSuggestion
+            {
+                Title = $"#{hashtag.Tag} Trendinde Viral Reels Fikri",
+                Description = $"#{hashtag.Tag} hashtag'i şu anda trendde! {hashtag.PostCount} post bu hashtag ile paylaşılmış. Keşfet'e düşme ihtimali yüksek.",
+                Category = "Instagram Reels",
+                Script = $"0-3s: Hook - Dikkat çekici açılış karesi\n" +
+                         $"3-20s: #{hashtag.Tag} konusunda ana içerik\n" +
+                         "20-25s: Değer katma / sürpriz an\n" +
+                         "25-30s: CTA - \"Beğen ve takip et!\"",
+                Tags = [$"{hashtag.Tag}", .. analysis.TopHashtags.Skip(1).Take(4).Select(h => h.Tag)],
+                ThumbnailIdea = "Parlak renkli arka plan, büyük metin overlay ve emoji kullanımı",
+                TargetAudience = "Instagram'da Keşfet sayfasını aktif kullanan kullanıcılar",
+                EstimatedDuration = "30 saniye",
+                WhyItWorks = $"#{hashtag.Tag} trendinde {hashtag.PostCount} post var ve toplam {hashtag.FormattedViews} izlenme almış."
+            });
+        }
+
+        return suggestions;
+    }
 }
 
 public class OpenAiChatResponse

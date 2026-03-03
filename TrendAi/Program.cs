@@ -3,20 +3,23 @@ using TrendAi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// YouTube & OpenAI & TikTok ayarlarını bind et
+// YouTube & OpenAI & TikTok & Instagram ayarlarını bind et
 builder.Services.Configure<YouTubeApiSettings>(builder.Configuration.GetSection("YouTubeApi"));
 builder.Services.Configure<OpenAiSettings>(builder.Configuration.GetSection("OpenAi"));
 builder.Services.Configure<TikTokApiSettings>(builder.Configuration.GetSection("TikTokApi"));
 builder.Services.Configure<TikTokPublishSettings>(builder.Configuration.GetSection("TikTokPublish"));
+builder.Services.Configure<InstagramApiSettings>(builder.Configuration.GetSection("InstagramApi"));
 
 // Servisleri kaydet
 builder.Services.AddSingleton<IYouTubeTrendService, YouTubeTrendService>();
 builder.Services.AddSingleton<ITrendAnalysisService, TrendAnalysisService>();
 builder.Services.AddSingleton<ITikTokAnalysisService, TikTokAnalysisService>();
+builder.Services.AddSingleton<IInstagramAnalysisService, InstagramAnalysisService>();
 builder.Services.AddHttpClient<IAiVideoGeneratorService, AiVideoGeneratorService>();
 builder.Services.AddHttpClient<ITikTokTrendService, TikTokTrendService>();
 builder.Services.AddHttpClient<ITikTokDownloaderService, TikTokDownloaderService>();
 builder.Services.AddHttpClient<ITikTokPublishService, TikTokPublishService>();
+builder.Services.AddHttpClient<IInstagramTrendService, InstagramTrendService>();
 
 builder.Services.AddControllersWithViews();
 

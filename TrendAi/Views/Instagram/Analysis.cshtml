@@ -1,0 +1,278 @@
+@model TrendAi.ViewModels.InstagramAnalysisViewModel
+@{
+    ViewData["Title"] = "Instagram Trend Analizi";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-6 fw-bold">
+            <i class="fab fa-instagram me-2" style="color:#E1306C;"></i>Instagram Trend Analizi
+        </h1>
+        <p class="text-muted">Instagram trendlerini hashtag ve müzik bazında analiz edin</p>
+    </div>
+</div>
+
+<form method="post" asp-action="Analysis" asp-controller="Instagram" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-auto">
+            <label class="form-label fw-bold">Hashtag / Kategori</label>
+            <select name="hashtag" class="form-select">
+                <option value="reels" selected="@(Model.Hashtag == "reels")">🎬 Reels</option>
+                <option value="kesfet" selected="@(Model.Hashtag == "kesfet")">🔍 Keşfet (TR)</option>
+                <option value="trending" selected="@(Model.Hashtag == "trending")">🔥 Trending</option>
+                <option value="viral" selected="@(Model.Hashtag == "viral")">💥 Viral</option>
+                <option value="foryou" selected="@(Model.Hashtag == "foryou")">✨ For You</option>
+                <option value="entertainment" selected="@(Model.Hashtag == "entertainment")">🎭 Eğlence</option>
+                <option value="fashion" selected="@(Model.Hashtag == "fashion")">👗 Moda</option>
+                <option value="food" selected="@(Model.Hashtag == "food")">🍕 Yemek</option>
+                <option value="travel" selected="@(Model.Hashtag == "travel")">✈️ Seyahat</option>
+                <option value="fitness" selected="@(Model.Hashtag == "fitness")">💪 Fitness</option>
+                <option value="technology" selected="@(Model.Hashtag == "technology")">💻 Teknoloji</option>
+                <option value="comedy" selected="@(Model.Hashtag == "comedy")">😂 Komedi</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn" style="background:#E1306C;color:white;">
+                <i class="fas fa-search me-1"></i>Analiz Et
+            </button>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>@Model.ErrorMessage
+    </div>
+}
+
+@if (Model.Analysis is not null)
+{
+    var a = Model.Analysis;
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center text-white" style="background: linear-gradient(45deg, #f09433, #dc2743);">
+                <div class="card-body">
+                    <i class="fab fa-instagram fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@a.TotalPostsAnalyzed</h3>
+                    <p class="mb-0">Analiz Edilen Post</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <i class="fas fa-play fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@(a.TotalViews switch { >= 1_000_000_000 => $"{a.TotalViews / 1_000_000_000.0:F1}B", >= 1_000_000 => $"{a.TotalViews / 1_000_000.0:F1}M", >= 1_000 => $"{a.TotalViews / 1_000.0:F1}K", _ => a.TotalViews.ToString() })</h3>
+                    <p class="mb-0">Toplam İzlenme</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <i class="fas fa-hashtag fa-2x mb-2"></i>
+                    <h3 class="fw-bold">@a.TopHashtags.Count</h3>
+                    <p class="mb-0">Trend Hashtag</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h3 class="fw-bold">%@a.AvgEngagementRate.ToString("F2")</h3>
+                    <p class="mb-0">Ort. Etkileşim</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-chart-bar me-2"></i>Hashtag Dağılımı (Post Sayısı)
+                </div>
+                <div class="card-body">
+                    <canvas id="hashtagChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-fire me-2 text-danger"></i>Etkileşim Oranı (Top 10)
+                </div>
+                <div class="card-body">
+                    <canvas id="engagementChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-bold">
+                    <i class="fas fa-hashtag me-2" style="color:#E1306C;"></i>Trend Hashtag'ler
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Hashtag</th>
+                                    <th>Post</th>
+                                    <th>İzlenme</th>
+                                    <th>Etkileşim</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ var rank = 0; }
+                                @foreach (var tag in a.TopHashtags.Take(20))
+                                {
+                                    rank++;
+                                    <tr>
+                                        <td><span class="badge bg-secondary">@rank</span></td>
+                                        <td><span class="badge" style="background:#E1306C;">#@tag.Tag</span></td>
+                                        <td>@tag.PostCount</td>
+                                        <td>@tag.FormattedViews</td>
+                                        <td>
+                                            <div class="progress" style="height:6px;">
+                                                <div class="progress-bar" style="width:@(Math.Min(tag.EngagementRate * 10, 100))%;background:#E1306C;"></div>
+                                            </div>
+                                            <small>%@tag.EngagementRate.ToString("F2")</small>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (a.TopMusic.Count > 0)
+        {
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white fw-bold">
+                        <i class="fas fa-music me-2" style="color:#E1306C;"></i>Trend Müzikler
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            @{ var mrank = 0; }
+                            @foreach (var music in a.TopMusic.Take(10))
+                            {
+                                mrank++;
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="badge bg-secondary me-2">@mrank</span>
+                                        <small>@music.Title</small>
+                                    </div>
+                                    <span class="badge rounded-pill" style="background:#E1306C;">@music.PostCount post</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white fw-bold">
+            <i class="fas fa-trophy me-2 text-warning"></i>En Çok İzlenen Reels
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Kullanıcı</th>
+                            <th>Açıklama</th>
+                            <th>İzlenme</th>
+                            <th>Beğeni</th>
+                            <th>Yorum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ var vrank = 0; }
+                        @foreach (var post in a.AllPosts.OrderByDescending(p => p.ViewCount > 0 ? p.ViewCount : p.LikeCount).Take(10))
+                        {
+                            vrank++;
+                            <tr>
+                                <td><span class="badge bg-warning text-dark">@vrank</span></td>
+                                <td>
+                                    <small class="fw-bold">@@@post.AuthorUsername</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        @(post.Caption.Length > 60 ? post.Caption[..60] + "..." : post.Caption)
+                                    </small>
+                                </td>
+                                <td><span class="badge bg-danger">@post.FormattedViews</span></td>
+                                <td>@post.FormattedLikes</td>
+                                <td>@post.CommentCount.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else if (!Model.IsLoaded)
+{
+    <div class="text-center py-5">
+        <i class="fas fa-chart-pie fa-4x mb-3 text-muted"></i>
+        <h4 class="text-muted">Analiz için bir hashtag seçin</h4>
+        <p class="text-muted">Hashtag seçip "Analiz Et" butonuna tıklayın.</p>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Analysis is not null)
+    {
+        var hashtagLabels = System.Text.Json.JsonSerializer.Serialize(Model.Analysis.TopHashtags.Take(15).Select(h => "#" + h.Tag).ToList());
+        var hashtagData = System.Text.Json.JsonSerializer.Serialize(Model.Analysis.TopHashtags.Take(15).Select(h => h.PostCount).ToList());
+        var engLabels = System.Text.Json.JsonSerializer.Serialize(Model.Analysis.TopHashtags.Take(10).Select(h => "#" + h.Tag).ToList());
+        var engData = System.Text.Json.JsonSerializer.Serialize(Model.Analysis.TopHashtags.Take(10).Select(h => Math.Round(h.EngagementRate, 2)).ToList());
+
+        <script>
+            new Chart(document.getElementById('hashtagChart'), {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(hashtagLabels),
+                    datasets: [{
+                        label: 'Post Sayısı',
+                        data: @Html.Raw(hashtagData),
+                        backgroundColor: 'rgba(225, 48, 108, 0.7)',
+                        borderColor: 'rgba(225, 48, 108, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+
+            new Chart(document.getElementById('engagementChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(engLabels),
+                    datasets: [{
+                        data: @Html.Raw(engData),
+                        backgroundColor: [
+                            '#E1306C','#F77737','#FCAF45','#833AB4','#405DE6',
+                            '#5B51D8','#C13584','#E1306C','#FD1D1D','#833AB4'
+                        ]
+                    }]
+                },
+                options: { responsive: true }
+            });
+        </script>
+    }
+}

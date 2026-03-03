@@ -21,3 +21,10 @@ public class TikTokApiSettings
     public string Region { get; set; } = "TR";
     public int MaxResults { get; set; } = 30;
 }
+
+public class InstagramApiSettings
+{
+    public string RapidApiKey { get; set; } = string.Empty;
+    public string RapidApiHost { get; set; } = "instagram-scraper-api2.p.rapidapi.com";
+    public int MaxResults { get; set; } = 30;
+}
